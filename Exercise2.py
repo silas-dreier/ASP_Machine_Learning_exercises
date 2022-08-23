@@ -1,12 +1,8 @@
 #Imports:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 import pandas as pd
-import seaborn as sns
 import numpy as np
 import sklearn.preprocessing
-from sklearn.cluster import DBSCAN, AgglomerativeClustering, KMeans
 from sklearn.datasets import load_breast_cancer
-from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
-from sklearn.decomposition import PCA
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 #1 Feature Engineering ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -75,3 +71,80 @@ df["Cumulative"] = df["Explained Variance"].cumsum()
 df.plot(kind="bar")
 #   Answer: I need at least 6 components to explain 90% of the variance in the dataset.
 
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#clean slate
+globals().clear()
+#Imports:
+import pandas as pd
+import seaborn as sns
+import sklearn.preprocessing
+from sklearn.cluster import DBSCAN, AgglomerativeClustering, KMeans
+from sklearn.datasets import load_iris
+from sklearn.metrics import silhouette_score
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+#3 Principal Component Analysis::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#(a)
+iris = sklearn.datasets.load_iris()
+    X = iris["data"]
+    Y = iris["target"]
+
+#(b)
+scaler = sklearn.preprocessing.StandardScaler()
+scaler.fit(X)
+X_scaled = pd.DataFrame(scaler.transform(X))
+X_scaled.describe() #--> test: standard errors euqal? Yes, thus unit variance achieved
+
+#kmeans
+kmeans = KMeans(n_clusters=3, random_state=42)
+kmeans.fit(X)
+kmeans.labels_
+
+#Agglomerative Clustering
+agg = AgglomerativeClustering(n_clusters=3)
+agg.fit(X)
+
+#dbscan
+dbscan = DBSCAN(eps=1, min_samples=2)
+dbscan.fit(X)
+
+#Combine
+df = pd.DataFrame()
+df["kmeans"] = kmeans.labels_
+df["agg"] = agg.labels_
+df["dbscan"] = dbscan.labels_
+df["dbscan"].value_counts()
+
+#(d)
+print(silhouette_score(X, kmeans.labels_))
+print(silhouette_score(X, agg.labels_))
+print(silhouette_score(X, dbscan.labels_)) #highest score
+#   Noise assignments from DBSCAN have to be treated differently
+#   because, in contrast to the other two models, DBSCAN declares
+#   data as noise if it is far away from the clusters, rather than
+#   trying to group everything into the clusters
+
+#(e)
+temp = pd.DataFrame(X, columns=iris["feature_names"])
+df["sepal width (cm)"] = temp["sepal width (cm)"]
+df["petal length (cm)"] = temp["petal length (cm)"]
+
+#(f)
+df.loc[df["dbscan"] == 0, "dbscan"] = "Noise"
+
+#(g)
+#preapre data for plotting
+df1 = pd.melt(df, id_vars=["sepal width (cm)", "petal length (cm)"])
+df1.rename(columns={'variable': 'cluster algorithm', 'value': 'cluster assignments'}, inplace=True)
+
+#plot
+fig = sns.relplot(
+    data=df1, x="sepal width (cm)", y="petal length (cm)",
+    col="cluster algorithm", hue="cluster assignments", palette="colorblind",
+    kind="scatter"
+)
+fig.savefig("./output/cluster_petal.pdf")
+#The noise assignment does make sense. Since the other methods tried to find clusters, they also tried grouping that part of
+# the data into one cluster, that dbscan in a certain way "clustered" as noise. Naturally, they then came up with three clusters
+# where one describes the Noise, while dbscan grouped the two clusters from the other two methods into one and label the the "third cluster"
+# as noise, so to speak.
