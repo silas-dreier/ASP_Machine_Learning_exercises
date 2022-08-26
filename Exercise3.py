@@ -75,9 +75,8 @@ X_test_scaled = scaler.transform(X_test)
 algorithms = [("scaler", MinMaxScaler()),
             ("nn", MLPRegressor(solver="lbfgs", random_state=42, max_iter=1000, activation="identity"))]
 pipe = Pipeline(algorithms, verbose = True)
-para_grid = {"nn__hidden_layer_sizes": [(75, 75), (100, 100), (125, 125), (150, 150),
-                                      (200, 200), (225, 225), (250, 250), (275, 275), (300, 300)],
-            "nn__alpha": [0.001, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04]}
+para_grid = {"nn__hidden_layer_sizes": [(125, 125), (150, 150), (200, 200)],
+            "nn__alpha": [0.001, 0.005, 0.01]}
 grid = GridSearchCV(pipe, para_grid, cv=3, scoring='r2').fit(X_train, y_train)
 
 # (c)
@@ -92,9 +91,10 @@ print("On the test data, this model scores: {:.3f}".format(best_parameters_test_
 # points.
 
 # (d)
-grid.best_estimator_
-# Anything else: WTF?
-
+df_first_coef = pd.DataFrame(grid.best_estimator_._final_estimator.coefs_[0])
+ax = sns.heatmap(data = df_first_coef,
+            yticklabels = diabetes["feature_names"])
+ax.figure.savefig("./output/nn_diabetes_importances.pdf")
 
 #3. Neural Networks Classification::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #(a)
