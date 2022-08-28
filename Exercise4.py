@@ -39,7 +39,8 @@ def tokenize_and_stem(text):
     text = text.translate(str.maketrans(d))
     return [_stemmer.stem(t) for t in nltk.word_tokenize(text)]
 # Vectorizing
-tfidf = TfidfVectorizer(tokenizer=tokenize_and_stem, stop_words=_stopwords, ngram_range=(1,3) )
+tfidf = TfidfVectorizer(df_min=5, tokenizer=tokenize_and_stem, stop_words=_stopwords, ngram_range=(1,3) )
+# df_min=5 added to reduce number of vectors & prevent PC from freezing
 tfidf_matrix = tfidf.fit_transform(corpus)
 # Creating Sparse Matrix
 df_count = pd.DataFrame(tfidf_matrix.todense().T,
