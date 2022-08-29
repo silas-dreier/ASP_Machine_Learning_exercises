@@ -13,6 +13,7 @@ import pickle
 from scipy.spatial.distance import pdist
 from scipy.cluster.hierarchy import linkage, dendrogram
 import matplotlib.pyplot as plt
+import re
 
 
 CONSTANT1 = Path("./Asp_Machine_Leaning_exercises")
@@ -59,55 +60,104 @@ loaded_matrix = pickle.load(pickle_in)
 # b)
 array = np.array(loaded_matrix)
 
-y = pdist(array, metric='cosine')
+y = pdist(array, metric='cosine') #causes PC to freeze when df_min=5 is not introduced in the tfidf vectorization
 Z = linkage(y, method='complete')
 dn = dendrogram(Z, no_labels=True)
 
 
-# Now we plot the dendrogram for the linkage_array containing the distances
-# between clusters
-dendrogram(linkage_array)
-# Mark the cuts in the tree that signify two or three clusters
-ax = plt.gca()
-bounds = ax.get_xbound()
-ax.plot(bounds, [7.25, 7.25], '--', c='k')
-ax.plot(bounds, [4, 4], '--', c='k')
-ax.text(bounds[1], 7.25, ' two clusters', va='center', fontdict={'size': 15})
-ax.text(bounds[1], 4, ' three clusters', va='center', fontdict={'size': 15})
-plt.xlabel("Sample index")
-plt.ylabel("Cluster distance")
-
-
 # 4 Job Ads
-filepath = "./data/Stellenanzeigen.txt"
+# a)
+raw = []
+f = open('data/Stellenanzeigen.txt', 'r', encoding='utf-8')
+try:
+    for line in f:
+        raw.append(line.strip())
+except UnicodeDecodeError:
+    pass
+df_raw = pd.DataFrame(raw)
+df_raw.replace('', np.nan, inplace=True)
+df_raw = df_raw.dropna()
 
-def parse(filepath):
-    data = []
-    with open(filepath, 'r') as file:
-        line = file.readline()
-        while line:
-            reg_match = _RegExLib(line)
-
-            if reg_match.newspaper:
-                newspaper = reg_match.newspaper.group(1)
-            if reg_match.date:
-                date = reg_match.date.group(1)
-            if reg_march.ad:
-                ad = reg_match.ad.group(1)
-            dict_of_data = {
-                'Newspaper': newspaper,
-                'Date' : date,
-                'Job Ad': ad
-            }
-            data.append(dict_of_data)
-
-        line = file.readline()
-data = pd.DataFrame(data)
-
-
-
-class _RegExLib:
-    """Set up regular expressions"""
-    _reg_newspaper = re.compile('^(Neue Züricher Zeitung),\d*.\w*\d{4}$|^(Tages-Anzeiger),\d*.\w*\d{4}$')
-    _reg_date = re.compile('^(Neue Züricher Zeitung),(\d*.\w*\d{4})$|^(Tages-Anzeiger),(\d*.\w*\d{4})$')
-    _reg_ad = re.compile('^.*$')
+# Columns
+df_raw["Newspaper"] = df_raw[0].str.extract('(Tages-Anzeiger|Neue Zürcher Zeitung)')
+df_raw["Date"] = df_raw[0].str.extract('(\d{1,2}\.\s*\w*[äüö]?\w*\s*\d{4})')
+df_raw["Newspaper"]=df_raw["Newspaper"].fillna(method='ffill')
+df_raw["Date"]=df_raw["Date"].fillna(method='ffill')
+df_raw["Ad"] = df_raw[0]
+df_raw["Ad"].iloc[3] = "Innovationsfreude und psychologisches Geschick, Ihre Kombination? " \
+                       "Unsere Klientin, ein erfolgreiches Dienstleistungsunternehmen im Non Profit Bereich, " \
+                       "mit zirka 60 Geschäftsstellen in der Schweiz, geniesst eine ausgezeichnete Reputation. " \
+                       "Als wesentlicher Erfolgsfaktor des Unternehmens gelten die hochmotivierten Mitarbeiter/innen, " \
+                       "deren fachliche Weiterbildung und persönliche Entwicklung laufend gefördert wird. " \
+                       "Neue Formen der Beratung der Kunden und deren Betreuung sind die zukunftsorientierten " \
+                       "Strategien im Markt und Ihre Chance, in einem anspruchsvollen Projekt mitzuwirken. " \
+                       "In ein gut eingespieltes Team suchen wir zur Ergänzung eine/n Projektmitarbeiter/in 80% " \
+                       "für herausforderndes Pilotprojekt in verschiedenen Kantonen. " \
+                       "Sie sind der Geschäftsleitung unterstellt und zuständig für die konzeptionelle Ausrichtung " \
+                       "sowie die Koordination und Evaluation des Projektes im Sozialbereich und " \
+                       "arbeiten aktiv an dessen Umsetzung mit. Ihr Arbeitsbereich umfasst die Schaffung von " \
+                       "Arbeitsplätzen für behinderte Menschen. Es ist eine spannende Aufgabe mit zukunftsweisenden " \
+                       "Möglichkeiten und Chancen, sehr viel dazuzulernen. Es ist eine anspruchsvolle " \
+                       "Drehscheibenfunktion für engagierte Mitarbeiter/innen mit einer abgeschlossenen " \
+                       "Ausbildung (Bereich Administration, Betriebswirtschaft, Sozialarbeit, eventuell Erfahrung " \
+                       "in einem öffentlichen Arbeitsvermittlungszentrum). Sie sind kommunikativ, teamfähig und haben " \
+                       "Freude am Kontakt mit Menschen. Ihr Arbeitsplatz befindet sich in Zürich. Bitte " \
+                       "senden Sie Ihre Bewerbung an die beauftragte Personalberatung. Wir freuen uns sehr, " \
+                       "Sie bald persönlich kennenzulernen, um mit Ihnen weitere Details zu besprechen. " \
+                       "Diskretion sichern wir Ihnen zu. " \
+                       "[foto] BUCHER CONSULT management consulting services " \
+                       "[adr], 8008 Zürich, [tel], [email], [wwwadr]."
+df_raw["Ad"].iloc[4] = "Innovationsfreude und psychologisches Geschick, Ihre Kombination? " \
+                       "Unsere Klientin, ein erfolgreiches Dienstleistungsunternehmen im Non Profit Bereich, " \
+                       "mit zirka 60 Geschäftsstellen in der Schweiz, geniesst eine ausgezeichnete Reputation. " \
+                       "Als wesentlicher Erfolgsfaktor des Unternehmens gelten die hochmotivierten Mitarbeiter/innen, " \
+                       "deren fachliche Weiterbildung und persönliche Entwicklung laufend gefördert wird. " \
+                       "Neue Formen der Beratung der Kunden und deren Betreuung sind die zukunftsorientierten " \
+                       "Strategien im Markt und Ihre Chance, in einem anspruchsvollen Projekt mitzuwirken. " \
+                       "In ein gut eingespieltes Team suchen wir zur Ergänzung eine/n Projektmitarbeiter/in 80% " \
+                       "für herausforderndes Pilotprojekt in verschiedenen Kantonen. " \
+                       "Sie sind der Geschäftsleitung unterstellt und zuständig für die konzeptionelle Ausrichtung " \
+                       "sowie die Koordination und Evaluation des Projektes im Sozialbereich und " \
+                       "arbeiten aktiv an dessen Umsetzung mit. Ihr Arbeitsbereich umfasst die Schaffung von " \
+                       "Arbeitsplätzen für behinderte Menschen. Es ist eine spannende Aufgabe mit zukunftsweisenden " \
+                       "Möglichkeiten und Chancen, sehr viel dazuzulernen. Es ist eine anspruchsvolle " \
+                       "Drehscheibenfunktion für engagierte Mitarbeiter/innen mit einer abgeschlossenen " \
+                       "Ausbildung (Bereich Administration, Betriebswirtschaft, Sozialarbeit, eventuell Erfahrung " \
+                       "in einem öffentlichen Arbeitsvermittlungszentrum). Sie sind kommunikativ, teamfähig und haben " \
+                       "Freude am Kontakt mit Menschen. Ihr Arbeitsplatz befindet sich in Zürich. Bitte " \
+                       "senden Sie Ihre Bewerbung an die beauftragte Personalberatung. Wir freuen uns sehr, " \
+                       "Sie bald persönlich kennenzulernen, um mit Ihnen weitere Details zu besprechen. " \
+                       "Diskretion sichern wir Ihnen zu. " \
+                       "[foto] BUCHER CONSULT management consulting services " \
+                       "[adr], 8008 Zürich, [tel], [email], [wwwadr]."
+df_raw["Ad"].iloc[5] = "Innovationsfreude und psychologisches Geschick, Ihre Kombination? " \
+                       "Unsere Klientin, ein erfolgreiches Dienstleistungsunternehmen im Non Profit Bereich, " \
+                       "mit zirka 60 Geschäftsstellen in der Schweiz, geniesst eine ausgezeichnete Reputation. " \
+                       "Als wesentlicher Erfolgsfaktor des Unternehmens gelten die hochmotivierten Mitarbeiter/innen, " \
+                       "deren fachliche Weiterbildung und persönliche Entwicklung laufend gefördert wird. " \
+                       "Neue Formen der Beratung der Kunden und deren Betreuung sind die zukunftsorientierten " \
+                       "Strategien im Markt und Ihre Chance, in einem anspruchsvollen Projekt mitzuwirken. " \
+                       "In ein gut eingespieltes Team suchen wir zur Ergänzung eine/n Projektmitarbeiter/in 80% " \
+                       "für herausforderndes Pilotprojekt in verschiedenen Kantonen. " \
+                       "Sie sind der Geschäftsleitung unterstellt und zuständig für die konzeptionelle Ausrichtung " \
+                       "sowie die Koordination und Evaluation des Projektes im Sozialbereich und " \
+                       "arbeiten aktiv an dessen Umsetzung mit. Ihr Arbeitsbereich umfasst die Schaffung von " \
+                       "Arbeitsplätzen für behinderte Menschen. Es ist eine spannende Aufgabe mit zukunftsweisenden " \
+                       "Möglichkeiten und Chancen, sehr viel dazuzulernen. Es ist eine anspruchsvolle " \
+                       "Drehscheibenfunktion für engagierte Mitarbeiter/innen mit einer abgeschlossenen " \
+                       "Ausbildung (Bereich Administration, Betriebswirtschaft, Sozialarbeit, eventuell Erfahrung " \
+                       "in einem öffentlichen Arbeitsvermittlungszentrum). Sie sind kommunikativ, teamfähig und haben " \
+                       "Freude am Kontakt mit Menschen. Ihr Arbeitsplatz befindet sich in Zürich. Bitte " \
+                       "senden Sie Ihre Bewerbung an die beauftragte Personalberatung. Wir freuen uns sehr, " \
+                       "Sie bald persönlich kennenzulernen, um mit Ihnen weitere Details zu besprechen. " \
+                       "Diskretion sichern wir Ihnen zu. " \
+                       "[foto] BUCHER CONSULT management consulting services " \
+                       "[adr], 8008 Zürich, [tel], [email], [wwwadr]."
+df_raw=df_raw.drop(0, axis=1)
+df_raw=df_raw.drop_duplicates()
+df_raw=df_raw.drop(0, axis=0)
+df_raw=df_raw.drop(3, axis=0)
+df_raw=df_raw.drop(7, axis=0)
+for i in range(10, 400, 3):
+    df_raw=df_raw.drop(i, axis=0)
+df_final = df_raw
