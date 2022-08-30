@@ -161,3 +161,5 @@ df_raw=df_raw.drop(7, axis=0)
 for i in range(10, 400, 3):
     df_raw=df_raw.drop(i, axis=0)
 df_final = df_raw
+
+# ran out of time to complete the exercises due to urgent work taks
